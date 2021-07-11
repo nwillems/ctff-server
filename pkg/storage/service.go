@@ -7,12 +7,12 @@ type FeatureFlag struct {
 
 type FeatureFlagStore interface {
 	// RegisterFeatureFlags Registers featureflags for an application
-	RegisterFeatureFlags(identity string, flags []*FeatureFlag) error
+	RegisterFeatureFlags(authentication_id string, identity string, flags []*FeatureFlag) error
 	// GetFeatureFlagState Gets the state of a feature flag
-	GetFeatureFlagState(identity string, flag_name string) (*FeatureFlag, error)
+	GetFeatureFlagState(authentication_id string, identity string, flag_name string) (*FeatureFlag, error)
 	// GetAllFeatureFlags Gets all feature flags for a given identity
-	GetAllFeatureFlags(identity string) ([]*FeatureFlag, error)
+	GetAllFeatureFlags(authentication_id string, identity string) ([]*FeatureFlag, error)
 	// SetFeatureFlagState Sets the new state for a given feature flag, flag_state should either be a
 	//   definitive(on/off) or a context-id and wether is should be on or off for said context
-	SetFeatureFlagState(identity string, flag_name string, flag_state string) error
+	SetFeatureFlagState(authentication_id string, identity string, flag_name string, flag_state string) error
 }

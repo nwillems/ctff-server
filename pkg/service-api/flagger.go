@@ -1,4 +1,4 @@
-package routes
+package ctff
 
 import (
 	"encoding/json"
@@ -21,9 +21,8 @@ type FlaggerServer struct {
 	store storage.FeatureFlagStore
 }
 
-func NewFlaggerServer() *FlaggerServer {
-	store := storage.NewInMemory()
-	return &FlaggerServer{store: store}
+func NewFlaggerServer(storageBackend storage.FeatureFlagStore, namespace string) *FlaggerServer {
+	return &FlaggerServer{store: storageBackend}
 }
 
 type RegisterFeatureFlags struct {
@@ -53,7 +52,7 @@ func (fs *FlaggerServer) RegisterFeatureFlagsHandler(rw http.ResponseWriter, req
 	}
 
 	logger.Printf("Registering for \"%s\": %v\n", identity, featureFlags)
-	fs.store.RegisterFeatureFlags(identity, featureFlags)
+	fs.store.RegisterFeatureFlags("authentication", identity, featureFlags)
 
 	rw.WriteHeader(201)
 	fmt.Fprintf(rw, "Flags registered")
@@ -62,7 +61,7 @@ func (fs *FlaggerServer) RegisterFeatureFlagsHandler(rw http.ResponseWriter, req
 func (fs *FlaggerServer) GetFeatureFlagStateHandler(rw http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	flag, err := fs.store.GetFeatureFlagState(vars["identity"], vars["flag_name"])
+	flag, err := fs.store.GetFeatureFlagState("authentication", vars["identity"], vars["flag_name"])
 	if err != nil {
 		rw.WriteHeader(401)
 		fmt.Fprintf(rw, "Error: %v", err)
@@ -75,7 +74,7 @@ func (fs *FlaggerServer) ListAllFeatureFlagsHandler(rw http.ResponseWriter, req 
 	vars := mux.Vars(req)
 	identity := vars["identity"]
 
-	featureFlags, err := fs.store.GetAllFeatureFlags(identity)
+	featureFlags, err := fs.store.GetAllFeatureFlags("authentication", identity)
 	if err != nil {
 		rw.WriteHeader(401)
 		fmt.Fprintf(rw, "Error: %v", err)
@@ -97,7 +96,7 @@ func (fs *FlaggerServer) SetFeatureFlagStateHandler(rw http.ResponseWriter, req 
 	}
 	flag_state := string(raw_flag)
 
-	err = fs.store.SetFeatureFlagState(identity, flag_name, flag_state)
+	err = fs.store.SetFeatureFlagState("authentication", identity, flag_name, flag_state)
 	if err != nil {
 		rw.WriteHeader(401)
 		fmt.Fprintf(rw, "Error: %v", err)

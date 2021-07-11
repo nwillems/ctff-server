@@ -24,7 +24,7 @@ func NewInMemory() *InMemoryStorage {
 }
 
 // RegisterFeatureFlags Registers featureflags for an application
-func (s *InMemoryStorage) RegisterFeatureFlags(identity string, flags []*FeatureFlag) error {
+func (s *InMemoryStorage) RegisterFeatureFlags(auth string, identity string, flags []*FeatureFlag) error {
 	store, ok := s.storage[identity]
 	if !ok {
 		s.storage[identity] = new(IdentityStore)
@@ -39,7 +39,7 @@ func (s *InMemoryStorage) RegisterFeatureFlags(identity string, flags []*Feature
 }
 
 // GetFeatureFlagState Gets the state of a feature flag
-func (s *InMemoryStorage) GetFeatureFlagState(identity string, flag_name string) (*FeatureFlag, error) {
+func (s *InMemoryStorage) GetFeatureFlagState(auth string, identity string, flag_name string) (*FeatureFlag, error) {
 	idstore, ok := s.storage[identity]
 	if !ok {
 		return nil, fmt.Errorf("No identity found")
@@ -55,7 +55,7 @@ func (s *InMemoryStorage) GetFeatureFlagState(identity string, flag_name string)
 }
 
 // GetAllFeatureFlags Gets all feature flags for a given identity
-func (s *InMemoryStorage) GetAllFeatureFlags(identity string) ([]*FeatureFlag, error) {
+func (s *InMemoryStorage) GetAllFeatureFlags(auth string, identity string) ([]*FeatureFlag, error) {
 	return nil, nil
 }
 
@@ -77,7 +77,7 @@ func parseFlagState(flag_state string) bool {
 
 // SetFeatureFlagState Sets the new state for a given feature flag, flag_state should either be a
 //   definitive(on/off) or a context-id and wether is should be on or off for said context
-func (s *InMemoryStorage) SetFeatureFlagState(identity string, flag_name string, flag_state string) error {
+func (s *InMemoryStorage) SetFeatureFlagState(auth string, identity string, flag_name string, flag_state string) error {
 	idstore, ok := s.storage[identity]
 	if !ok {
 		return fmt.Errorf("No configuration for given identity")

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	api "github.com/nwillems/ctff-server/pkg/service-api"
+	"github.com/nwillems/ctff-server/pkg/storage"
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -32,6 +33,20 @@ func getKubeConfig() (*rest.Config, error) {
 	}
 }
 
+func getStorageBackend(useConfigmapStorage bool, namespace string) (storage.FeatureFlagStore, error) {
+	if useConfigmapStorage {
+		kubeconfig, err := getKubeConfig()
+		if err != nil {
+			return nil, err
+		}
+		store := storage.NewConfigMapBackend(namespace, kubeconfig)
+		return store, nil
+	} else {
+		return storage.NewInMemory(), nil
+	}
+}
+
+// Would still be awesome to do!
 func middlewareServiceAccountAuthentication(next http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		clientId := r.Header.Get("Authentication")
@@ -70,19 +85,27 @@ func indexHandleFunc() http.HandlerFunc {
 func main() {
 	flag.StringVar(&listenAddr, "listen-addr", ":9000", "server listen address")
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "Kubeconfig to use, otherwise assume running in-cluster")
+	useConfigmapStorage := flag.Bool("use-configmap-storage", true, "Set wether to use the in-memory or configmap(default) storage")
+	namespace := flag.String("namespace", "", "The namespace to use for the configmap backend")
 	flag.Parse()
 
 	logger.Println("Server is starting...")
 
+	storagebackend, err := getStorageBackend(*useConfigmapStorage, *namespace)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	router := mux.NewRouter()
-	server := api.NewFlaggerServer()
+	server := api.NewFlaggerServer(storagebackend, *namespace)
 	router.HandleFunc("/", indexHandleFunc())
 	// router.Handle("/healthz", healthz())
 
-	router.HandleFunc("/{identity}/flags/{flag_name}", middlewareServiceAccountAuthentication(server.GetFeatureFlagStateHandler)).Methods("GET")
-	router.HandleFunc("/{identity}/register", middlewareServiceAccountAuthentication(server.RegisterFeatureFlagsHandler)).Methods("POST")
-	router.HandleFunc("/{identity}/flags", server.ListAllFeatureFlagsHandler).Methods("GET")
-	router.HandleFunc("/{identity}/flags/{flag_name}", server.SetFeatureFlagStateHandler).Methods("POST")
+	// router.HandleFunc("/api/{identity}/flags/{flag_name}", middlewareServiceAccountAuthentication(server.GetFeatureFlagStateHandler)).Methods("GET")
+	router.HandleFunc("/api/{identity}/flags/{flag_name}", server.GetFeatureFlagStateHandler).Methods("GET")
+	router.HandleFunc("/api/{identity}/register", server.RegisterFeatureFlagsHandler).Methods("POST")
+	router.HandleFunc("/api/{identity}/flags", server.ListAllFeatureFlagsHandler).Methods("GET")
+	router.HandleFunc("/api/{identity}/flags/{flag_name}", server.SetFeatureFlagStateHandler).Methods("POST")
 
 	http_server := &http.Server{
 		Addr:         listenAddr,
