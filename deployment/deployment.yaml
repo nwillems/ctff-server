@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ctff
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ctff-server
+  namespace: ctff
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ctff-server
+  namespace: ctff
+spec:
+  selector:
+    matchLabels:
+      app: ctff-server
+  template:
+    metadata:
+      labels:
+        app: ctff-server
+    spec:
+      serviceAccount: ctff-server
+      containers:
+      - name: ctff-server  
+        image: localhost:32000/ctff-server:latest
+        args: ["-namespace", "my-app",]
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ctff-server
+  namespace: ctff
+spec:
+  selector:
+    app: ctff-server
+  ports:
+  - port: 80
+    targetPort: 9000
+---
